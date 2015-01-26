@@ -110,7 +110,7 @@ def autoconnect_command(args):
         assert False, "Couldn't find any schemes that are currently available."
 
 def disconnect_command(args):
-    subprocess.call(['dhclient', '-r', args.interface], stderr=subprocess.STDOUT)
+    subprocess.call(['/sbin/dhclient', '-r', args.interface], stderr=subprocess.STDOUT)
 
 
 def arg_parser():
