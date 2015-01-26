@@ -3,6 +3,7 @@ from __future__ import print_function
 import argparse
 import sys
 import os
+import subprocess
 
 from wifi import Cell, Scheme
 from wifi.utils import print_table, match as fuzzy_match
@@ -108,6 +109,9 @@ def autoconnect_command(args):
     else:
         assert False, "Couldn't find any schemes that are currently available."
 
+def disconnect_command(args):
+    subprocess.call(['dhclient', '-r', args.interface], stderr=subprocess.STDOUT)
+
 
 def arg_parser():
     parser = argparse.ArgumentParser()
@@ -156,6 +160,10 @@ def arg_parser():
                                 action="store_true",
                                 help="Connect to a network without storing it in the config file")
     parser_connect.set_defaults(func=connect_command)
+
+    parser_disconnect = subparsers.add_parser('disconnect',
+                                              help='Disconnects from the network.')
+    parser_disconnect.set_defaults(func=disconnect_command)
     
     
     # TODO: how to specify the correct interfaces file to work off of.

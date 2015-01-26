@@ -158,6 +158,12 @@ class Scheme(object):
 
         return self.parse_ifup_output(ifup_output)
 
+    def deactivate(self):
+        """
+        Disconnect from the network without bringing down the interface
+        """
+        return subprocess.call(['/sbin/dhclient', '-r', self.interface], stderr=subprocess.STDOUT)
+
     def parse_ifup_output(self, output):
         matches = bound_ip_re.search(output)
         if matches:
