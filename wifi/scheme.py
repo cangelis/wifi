@@ -107,18 +107,18 @@ class Scheme(object):
         return cls(interface, name, configuration(cell, passkey))
 
     @classmethod
-    def current(cls, interface):
+    def current(cls):
         """
         Returns a list of all the schemes that it is possible that are
         currently activated.  May return None if no scheme is currently
         activaated.
         """
         try:
-            scheme_name = subprocess.check_output(['/sbin/iwgetid', '--raw', '--scheme', interface], stderr=subprocess.STDOUT).strip().decode('ascii')
+            scheme_name = subprocess.check_output(['/sbin/iwgetid', '--raw', '--scheme'], stderr=subprocess.STDOUT).strip().decode('ascii')
         except subprocess.CalledProcessError:
             return None
 
-        return Scheme.where(lambda s: s.interface == interface and s.ssid == scheme_name)
+        return Scheme.where(lambda s: s.ssid == scheme_name)
 
     @property
     def ssid(self):
