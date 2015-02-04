@@ -37,9 +37,6 @@ def configuration(cell, passkey=None):
             raise NotImplementedError
 
 
-bound_ip_re = re.compile(r'^bound to (?P<ip_address>\S+)', flags=re.MULTILINE)
-
-
 class Scheme(object):
     """
     Saved configuration for connecting to a wireless network.  This
@@ -109,6 +106,24 @@ class Scheme(object):
         """
         return cls(interface, name, configuration(cell, passkey))
 
+    @classmethod
+    def current(cls, interface):
+        """
+        Returns a list of all the schemes that it is possible that are
+        currently activated.  May return None if no scheme is currently
+        activaated.
+        """
+        try:
+            scheme_name = subprocess.check_output(['/sbin/iwgetid', '--raw', '--scheme', interface], stderr=subprocess.STDOUT).strip().decode('ascii')
+        except subprocess.CalledProcessError:
+            return None
+
+        return Scheme.where(lambda s: s.interface == interface and s.ssid == scheme_name)
+
+    @property
+    def ssid(self):
+        return self.options.get('wpa-ssid', self.options.get('wireless-essid'))
+
     def save(self):
         """
         Writes the configuration to the :attr:`interfaces` file.
@@ -151,35 +166,22 @@ class Scheme(object):
         """
         Connects to the network as configured in this scheme.
         """
+        from .connection import Connection
 
         subprocess.check_output(['/sbin/ifdown', self.interface], stderr=subprocess.STDOUT)
-        ifup_output = subprocess.check_output(['/sbin/ifup'] + self.as_args(), stderr=subprocess.STDOUT)
-        ifup_output = ifup_output.decode('utf-8')
-
-        return self.parse_ifup_output(ifup_output)
+        output = subprocess.check_output(['/sbin/ifup'] + self.as_args(), stderr=subprocess.PIPE)
+        connection = Connection.current_for_scheme(self)
+        if not connection:
+            print(output)
+            raise ConnectionError("Failed to connect to %r" % self)
+        else:
+            return connection
 
     def deactivate(self):
         """
         Disconnect from the network without bringing down the interface
         """
         return subprocess.call(['/sbin/dhclient', '-r', self.interface], stderr=subprocess.STDOUT)
-
-    def parse_ifup_output(self, output):
-        matches = bound_ip_re.search(output)
-        if matches:
-            return Connection(scheme=self, ip_address=matches.group('ip_address'))
-        else:
-            raise ConnectionError("Failed to connect to %r" % self)
-
-
-class Connection(object):
-    """
-    The connection object returned when connecting to a Scheme.
-    """
-    def __init__(self, scheme, ip_address):
-        self.scheme = scheme
-        self.ip_address = ip_address
-
 
 # TODO: support other interfaces
 scheme_re = re.compile(r'iface\s+(?P<interface>wlan\d?)(?:-(?P<name>\w+))?')
